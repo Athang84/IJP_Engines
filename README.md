@@ -55,7 +55,7 @@ This code is divided into 4 major parts
    const baseQuery = `select id, rrp.createdon from g.rms_request_profiles_${clientUUID} rrp where isijp = true and  profile_status in ('IDFT','RMGA', 'PLAV', 'SLCT') and (jsonb_extract_path_text(profile_criteria, 'deploymentInfo','confidentialRole') is null or 'false')`;
    ```
    
-4. *Apply Filters* :
+3. *Apply Filters* :
    * Retrieve user data
    * Check for rotation eligibility
    * Apply nested configuration filters if available
@@ -84,5 +84,9 @@ This code is divided into 4 major parts
      * onsiteVsOffshore:
       Filters postings based on the user’s onsite vs. offshore preference.
 
-6. *Return the Final Query* : 
+4. *Return the Final Query* : 
+Adds a filter to the query based on profileStatusList, ensuring only postings with the specified statuses are included.
+```javascript
+baseQueryFilters += ` and profile_status in ('${profileStatusList.join("', '")}')`;
+```
 
