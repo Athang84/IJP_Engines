@@ -44,3 +44,45 @@ This function applies a tolerance filter for designation levels.
   * Checks if there is a tolerance range configured (e.g., if a user with designation level 5 can view jobs for levels 4–6).
   * Based on the calculated range, filters out designation IDs from the job postings and returns a condition that filters job postings based on designation levels.
 
+### Main function : **getIJPSearchFilters**
+
+This asynchronous function builds a SQL query to retrieve job postings based on various criteria and user attributes.
+This code is divided into 4 major parts
+
+1. *Retrieve Configurations* : Gets the configuration for the specific client.
+2. *Build Base Query* : Starts with a general SQL query for retrieving eligible job postings.
+   ```sql
+   const baseQuery = `select id, rrp.createdon from g.rms_request_profiles_${clientUUID} rrp where isijp = true and  profile_status in ('IDFT','RMGA', 'PLAV', 'SLCT') and (jsonb_extract_path_text(profile_criteria, 'deploymentInfo','confidentialRole') is null or 'false')`;
+   ```
+   
+4. *Apply Filters* :
+   * Retrieve user data
+   * Check for rotation eligibility
+   * Apply nested configuration filters if available
+   * Iterate through the filters
+     * allocationPool:
+      Checks if the user belongs to the required allocation pool based on allocationPoolAr array and includes only those who match the configured pool.
+
+     * profileStatus:
+      Updates profileStatusList based on the specified statuses in the configuration.
+
+     * bu:
+      Adds a condition to the query based on the user's business unit (BU) if specified.
+
+     * subBU:
+      Filters based on the user's sub-business unit.
+
+     * employeePractice:
+      Adds a condition to filter postings by the user’s practice area.
+
+     * employeeSubPractice: 
+      Adds a condition for filtering postings by the user’s sub-practice area.
+
+     * designationLevel:
+      Uses the designationLevelCheck function to adjust the query for designation level tolerances, if applicable.
+
+     * onsiteVsOffshore:
+      Filters postings based on the user’s onsite vs. offshore preference.
+
+6. *Return the Final Query* : 
+
