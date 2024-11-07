@@ -22,13 +22,15 @@ Break down of search engine.
 
 ### Helper Functions
 
-1. userRotationEligibleCheck
+1. *userRotationEligibleCheck*
+   
 This function checks if a user is eligible for job rotation.
 
 * Parameters: userData (user details), nestedConfig (configuration with job rotation eligibility settings).
 * Logic: Checks if the rotationEligibleCheck is enabled in nestedConfig. If it is, it verifies the user's eligibility status; otherwise, eligibility defaults to true.
 
-2. designationLevelCheck
+2. *designationLevelCheck*
+   
 This function applies a tolerance filter for designation levels.
 
 * Parameters:
