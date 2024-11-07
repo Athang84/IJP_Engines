@@ -14,6 +14,8 @@ Break down of search engine.
 
 ### Modules imported
 1.db: Interface with the database.
+
 2.Logger: Provides logging capabilities to log errors or important information.
+
 3.getIjpClientConfiguration: A helper function to retrieve the IJP configuration for a specific client, which is used to determine which filters should be applied for that client.
 
