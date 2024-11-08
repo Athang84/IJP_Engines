@@ -90,3 +90,34 @@ Adds a filter to the query based on profileStatusList, ensuring only postings wi
 baseQueryFilters += ` and profile_status in ('${profileStatusList.join("', '")}')`;
 ```
 
+## Apply Engine
+Apply Engine is responsible for various eligibility criteria are checked before a user can apply for a position. Let's break down the key parts of this code.
+
+### Modules Imported
+* *sequelize* for database operations.
+* *db* and *Logger* modules for database connections and logging.
+* *RMSConfiguration*, *getMatchScore*, and other utility functions for applying specific configurations and criteria checks.
+* *DateUtils* for date manipulation and *getIjpClientConfiguration* for fetching specific client configurations.
+
+### Helper Functions
+* errorResponseHandler and successResponseHandler:
+   * errorResponseHandler: Returns an error response object with status: false and an error message.
+   * successResponseHandler: Returns a successful response with status: true.
+     
+* designationLevelCheck:
+   * Checks if a user's designation level falls within a range (or tolerance) around the job profile's designation level.
+   * If the tolerance is defined in the configuration, it adjusts the min and max levels for eligible designations.
+   * It then checks if the profile’s designation ID is within the acceptable range.
+  
+* userRotationEligibleCheck:
+   * Checks if the user is eligible for rotation based on the isRotationEligible property in the user data and the nested configuration.
+
+* checkForApplyRateLimiter and checkForApplyThreshold:
+   * checkForApplyRateLimiter: Prevents users from applying more frequently than allowed by checking if their application count exceeds a set limit within a specified time frame.
+   * checkForApplyThreshold: Checks if a user has exceeded the ongoing application threshold, ensuring they do not have too many active applications at the same time.
+
+* getElementResult:
+   * A utility to verify that a user’s property (e.g., business unit, practice area) matches the profile’s required property, or that both are unspecified, making them compatible.
+
+
+
