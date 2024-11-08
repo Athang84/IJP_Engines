@@ -120,4 +120,55 @@ Apply Engine is responsible for various eligibility criteria are checked before 
    * A utility to verify that a user’s property (e.g., business unit, practice area) matches the profile’s required property, or that both are unspecified, making them compatible.
 
 
+### Main Function: *checkApplyEngine*
+
+This is the core function, performing the eligibility checks. It accepts profileId, userId, clientId, designationLevel, and rmsSearchConfig as inputs, representing the job profile, user, client, and job-related configurations.
+
+Configuration Fetching:
+
+Converts clientId to clientUUID and retrieves the IJP configuration (rmsIjpConfig) for that client.
+If the configuration is not found, it logs an error and returns a failure response.
+Filter and Profile Data Setup:
+
+Checks if there are specific applyconfigurations for this client. If not, it allows the application by returning a success response.
+If filters exist, they are processed as criteria to validate against the user and job profile.
+Fetch Profile and User Data:
+
+Queries for profile and user data based on profileId and userId.
+Retrieves the user’s eligibility for rotation using userRotationEligibleCheck, returning a failure response if ineligible.
+Filter-based Checks:
+
+Iterates through each element in filters and applies various checks based on job and user data:
+applyThreshold and applyRateLimiter: Verifies application limits using checkForApplyThreshold and checkForApplyRateLimiter.
+allocationPool: Checks if the user is in a required allocation pool, based on project allocation and user data.
+bu, subBU, employeePractice, employeeSubPractice: Verifies that user-specific details match job requirements using getElementResult.
+designationLevel: Uses designationLevelCheck to ensure the user’s designation level meets job requirements.
+onsiteVsOffshore and locationCountry, locationCity: Verifies user location preferences align with the job profile.
+profileStatus and matchScore: Checks that the user's profile status and match score meet the minimum requirements for application.
+onNotice: Restricts applications if the user is on notice, per configuration.
+Return Result:
+
+If all filters pass, checkApplyEngine returns a success response.
+If any check fails, it returns an error response with a relevant message logged.
+
+
+## Post Engine
+
+### Modules imported
+
+1. db: Interface with the database.
+
+2. Logger: Provides logging capabilities to log errors or important information.
+
+3. getIjpClientConfiguration: A helper function to retrieve the IJP configuration for a specific client, which is used to determine which filters should be applied for that client.
+
+### Helper Functions
+
+1. *userRotationEligibleCheck*
+   
+This function checks if a user is eligible for job rotation.
+
+* Parameters: userData (user details), nestedConfig (configuration with job rotation eligibility settings).
+* Logic: Checks if the rotationEligibleCheck is enabled in nestedConfig. If it is, it verifies the user's eligibility status; otherwise, eligibility defaults to true.
+
 
