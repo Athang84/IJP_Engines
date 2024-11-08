@@ -124,32 +124,59 @@ Apply Engine is responsible for various eligibility criteria are checked before 
 
 This is the core function, performing the eligibility checks. It accepts profileId, userId, clientId, designationLevel, and rmsSearchConfig as inputs, representing the job profile, user, client, and job-related configurations.
 
-Configuration Fetching:
+1. Initial Setup and Cofiguration setup
+   
+   * It removes dashes from clientId to create clientUUID, used to query client-specific tables.
+   * rmsIjpConfig is fetched via getIjpClientConfiguration, which contains configurations related to application eligibility criteria.
+     
+2. Early Exit Checks
+   * If rmsIjpConfig is missing or empty, it logs the error and returns an error response.
+   * If applyconfigurations is empty or set to allow all requests, it immediately returns a success response.
+     
+3. Filter Configuration
+   * The function retrieves filters from nestedConfig. If no filters are configured, it returns success.
 
-Converts clientId to clientUUID and retrieves the IJP configuration (rmsIjpConfig) for that client.
-If the configuration is not found, it logs an error and returns a failure response.
-Filter and Profile Data Setup:
+4. Data Fetching
+   * Queries are created to fetch:
+      * User data: from users_<clientUUID> table.
+      * Profile data: from rms_request_profiles_<clientUUID> table joined with rms_request_tbl_<clientUUID>, retrieving the candidate's profile and request data.
 
-Checks if there are specific applyconfigurations for this client. If not, it allows the application by returning a success response.
-If filters exist, they are processed as criteria to validate against the user and job profile.
-Fetch Profile and User Data:
+5. Eligibility Checks
+Each filter has a specific check to ensure compliance with configured conditions. If any check fails, an error response is returned.
 
-Queries for profile and user data based on profileId and userId.
-Retrieves the user’s eligibility for rotation using userRotationEligibleCheck, returning a failure response if ineligible.
-Filter-based Checks:
+Key Filters and Their Checks:
+* Apply Threshold:
+   Uses checkForApplyThreshold to see if the user has exceeded the limit on ongoing applications.
 
-Iterates through each element in filters and applies various checks based on job and user data:
-applyThreshold and applyRateLimiter: Verifies application limits using checkForApplyThreshold and checkForApplyRateLimiter.
-allocationPool: Checks if the user is in a required allocation pool, based on project allocation and user data.
-bu, subBU, employeePractice, employeeSubPractice: Verifies that user-specific details match job requirements using getElementResult.
-designationLevel: Uses designationLevelCheck to ensure the user’s designation level meets job requirements.
-onsiteVsOffshore and locationCountry, locationCity: Verifies user location preferences align with the job profile.
-profileStatus and matchScore: Checks that the user's profile status and match score meet the minimum requirements for application.
-onNotice: Restricts applications if the user is on notice, per configuration.
-Return Result:
+* Apply Rate Limiter:
+   Uses checkForApplyRateLimiter to check if the user has applied too frequently within a specified timeframe.
+  
+* Allocation Pool:
+   Ensures the user belongs to an eligible allocation pool by querying timeseriesdata based on the allocationPool filter.
+  
+* BU (Business Unit):
+   Checks if the user’s BU matches the BU in the profile data.
 
-If all filters pass, checkApplyEngine returns a success response.
-If any check fails, it returns an error response with a relevant message logged.
+* Sub-BU, Employee Practice, and Employee Sub-Practice:
+   Verifies the user’s sub-BU, practice, and sub-practice align with profile requirements.
+
+* Designation Level:
+   Calls designationLevelCheck to ensure the user's designation level is within a permissible range.
+
+* Onsite vs. Offshore:
+   Validates if the user’s location (onsite/offshore) matches the job’s preference.
+
+* Location Country and City:
+   Compares the user’s country and city with the profile requirements, including delivery center and preferred office location.
+  
+* Profile Status:
+   Ensures the user’s profile status matches one of the acceptable statuses in the configuration.
+  
+* Match Score:
+   Uses getMatchScore to check if the user’s match score meets the minimum required score.
+  
+* On Notice:
+   Checks if the user is marked as on notice, which may disqualify them from applying.
 
 
 ## Post Engine
