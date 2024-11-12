@@ -48,17 +48,62 @@ This function applies a tolerance filter for designation levels.
 
 This asynchronous function builds a SQL query to retrieve job postings based on various criteria and user attributes.
 This code is divided into 4 major parts
+1. *Parameter* :
+   
+   * clientId: The unique identifier for the client organization.
+   * userId: The unique identifier for the user requesting job postings.
+   * designationLevel: The user's designation level, used to filter postings by job level.
+   * rmsSearchConfig: Contains various configuration options for search criteria related to the RMS system.
+   * expectedMatchingScore: (optional) A threshold for a "matching score" that determines how well a user's profile matches job criteria.
+     
+2. *Retrieve Configurations* : Gets the configuration for the specific client.
+   ```javascript
+   const clientUUID = clientId.replace(/\-/g, '');
+   const rmsIjpConfig = await getIjpClientConfiguration(clientId);
+   ```
+   * Converts clientId into a clientUUID by removing hyphens, as it may be used as part of a table name in queries.
+   * Fetches the IJP configuration (rmsIjpConfig) for the client using getIjpClientConfiguration. This configuration dictates the search filters applicable to this client.
 
-1. *Retrieve Configurations* : Gets the configuration for the specific client.
-2. *Build Base Query* : Starts with a general SQL query for retrieving eligible job postings.
+   ```javascript
+   if (!rmsIjpConfig || Object.keys(rmsIjpConfig).length === 0) {
+     Logger.error(`IJP client: ${clientId} not found`);
+     return '';
+   }
+   ```
+   * If no configuration is found for the client, an error is logged, and an empty string is returned, as there’s nothing to filter on.
+     
+3. *Build Base Query* : Starts with a general SQL query for retrieving eligible job postings.
    ```sql
    const baseQuery = `select id, rrp.createdon from g.rms_request_profiles_${clientUUID} rrp where isijp = true and  profile_status in ('IDFT','RMGA', 'PLAV', 'SLCT') and (jsonb_extract_path_text(profile_criteria, 'deploymentInfo','confidentialRole') is null or 'false')`;
    ```
+   * Constructs a basic SQL query that retrieves job IDs and creation dates from the rms_request_profiles table for that client. Only postings with specific statuses ('IDFT', 'RMGA', 'PLAV', 'SLCT') are retrieved.
+   * Ensures that the job is not marked as a “confidential role” in the criteria JSON.
    
-3. *Apply Filters* :
+4. *Apply Filters* :
    * Retrieve user data
+      ```javascript
+      const userData = await db.readSequelize.query(`select data from g.users_${clientUUID} c where id = '${userId}'`);
+      const userObject = userData[0][0].data;
+      ```
+      * Fetches user data based on userId from the users table and extracts relevant user information (userObject) from the result.
    * Check for rotation eligibility
+      ```javascript
+      if (!userRotationEligibleCheck(userObject, nestedConfig)) return '';
+      ```
+      * Uses userRotationEligibleCheck to determine if the user is eligible for job rotation based on their eligibility status and client configuration. If not eligible, returns an empty string.
+        
    * Apply nested configuration filters if available
+      ```javascript
+      const filterVal = nestedConfig?.filters;
+      if (!filterVal) {
+        return baseQuery;
+      }
+      if (filterVal?.onNotice && userObject?.onNotice?.toUpperCase() === 'YES') {
+        return '';
+      }
+      ```
+      * Checks for various filters in filterVal (obtained from nestedConfig.filters). If the user is on notice and the configuration excludes such users, returns an empty string.
+        
    * Iterate through the filters
      * allocationPool:
       Checks if the user belongs to the required allocation pool based on allocationPoolAr array and includes only those who match the configured pool.
@@ -84,7 +129,7 @@ This code is divided into 4 major parts
      * onsiteVsOffshore:
       Filters postings based on the user’s onsite vs. offshore preference.
 
-4. *Return the Final Query* : 
+5. *Return the Final Query* : 
 Adds a filter to the query based on profileStatusList, ensuring only postings with the specified statuses are included.
 ```javascript
 baseQueryFilters += ` and profile_status in ('${profileStatusList.join("', '")}')`;
