@@ -7,6 +7,7 @@ This is the documentation of the IJP engines, there working and functionalities
 - [Search Engine](#search-engine)
 - [Apply Engine](#apply-engine)
 - [Post Engine](#post-engine)
+- [How to Trigger](#how-to-trigger)
 
 ## Search Engine
 Search Engine filters and retrieves job postings based on various criteria (e.g., user eligibility, designation, and specific configurations set by the company).
@@ -309,10 +310,154 @@ const getMappedArray = (array) => { ... };
 
 This helper function converts each item in an array to SQL-compatible single-quoted strings for direct inclusion in SQL statements.
 
+## How to Trigger
+
+### Triggering *markJobsForIJPByClient*
+
+* Purpose
+   *markJobsForIJPByClient* processes job profiles for a single client based on their configurations and generates SQL queries to update and retrieve profiles eligible for IJP.
+* How to Trigger
+   You need to pass in a client object, which includes clientid and configuration data. This function is generally called internally for each client but can be triggered directly if needed.
+   ```javascript
+      const client = {
+     clientid: 'client-uuid-1234',
+     data: {
+       postingconfiguration: {
+         postToIjp: true,
+         profileStatus: ['IDFT', 'RMGA'],
+         allRequests: true,
+         requestIJP: false,
+         designations: ['Design1', 'Design2'],
+         // Additional nested configuration data if needed
+       },
+     },
+   };
+   
+   markJobsForIJPByClient(client)
+     .then((response) => {
+       console.log('Generated Update Query:', response.updateQuery);
+       console.log('Generated Get Query:', response.getQuery);
+     })
+     .catch((error) => {
+       console.error('Error while processing markJobsForIJPByClient:', error);
+     });
+  ```
+   
+* Response
+When you call markJobsForIJPByClient, it will return an object with two properties: updateQuery and getQuery.
+
+Example Response
+```javascript
+   {
+  updateQuery: `update g.rms_request_profiles_clientuuid1234 rrp1 set "isijp" = true, modifiedon=now(), profile_criteria = jsonb_set(rrp1.profile_criteria, '{deploymentInfo, otherDetails, ijpEnable}', '"true"') where profile_status in ('IDFT', 'RMGA') and (jsonb_extract_path_text(profile_criteria, 'deploymentInfo','confidentialRole') is null or 'false') and isijp = false;`,
+  getQuery: `select id, requestid, ijp_activity, isijp, profile_criteria->'deploymentInfo'->'otherDetails'->>'ijpEnable' as "ijpEnable" from g.rms_request_profiles_clientuuid1234 where profile_status in ('IDFT', 'RMGA') and (jsonb_extract_path_text(profile_criteria, 'deploymentInfo','confidentialRole') is null or 'false') and isijp = false;`
+}
+```
+* updateQuery: The SQL query to update job profiles for the client, setting isijp to true for profiles matching the client’s configuration.
+* getQuery: The SQL query to retrieve job profiles for this client that meet specific conditions, so you can verify which profiles are affected by the update.
+
+You can then execute these queries on the database to perform the updates and retrieve the relevant profiles.
+
+### Triggering *markJobsforIJP*
+* Purpose
+   markJobsforIJP is the batch-processing function that applies the IJP posting configuration for all clients with IJP enabled. This function fetches each client’s configuration and then processes them, calling markJobsForIJPByClient or an alternative engine (EngineV2) as configured.
+  
+* How to Trigger
+   To call markJobsforIJP, provide a loggerObject for tracking logging information. This function runs without needing direct input parameters for each client.
+   ```javascript
+      const loggerObject = {
+     logStart: (clientid) => console.log(`Started processing for client: ${clientid}`),
+     logSuccess: (clientid) => console.log(`Successfully processed for client: ${clientid}`),
+     logFailure: (error, clientid) => console.error(`Failed for client ${clientid} with error:`, error),
+   };
+   ```
+
+markJobsforIJP(loggerObject);
+* Response
+markJobsforIJP doesn’t return a direct response object because it processes all IJP-enabled clients sequentially, updating each client's profiles based on configuration.
+
+Example Logs
+Instead of a response, you’ll see logs (if logging is enabled) that detail the processing status for each client. Here’s a typical log output example:
+
+```text
+markJobsforIJP is started
+Started processing for client: client-uuid-1234
+IJP enabled for client: client-uuid-1234
+Successfully processed for client: client-uuid-1234
+Started processing for client: client-uuid-5678
+update postToIJP from IJPJobEngine
+Successfully processed for client: client-uuid-5678
+markJobsforIJP is finished
+```
+Each log entry indicates:
+
+* Client Start: Logs the start of processing for each client.
+* Client Success: Logs a success message if all updates are applied correctly for a client.
+* Client Failure (if applicable): Logs an error if processing for a specific client fails.
 
 
+### Triggering *addAutoPostToIjpHistory*     
+* Purpose
+   The addAutoPostToIjpHistory function adds an activity history entry for each job profile, marking actions like posting to IJP or enabling IJP, and logs this activity in the database.
+* How to Trigger
+   Call addAutoPostToIjpHistory with clientid, configuration details, and a list of profiles for which you want to update the activity history.
+   ```javascript
+   const clientid = 'client-uuid-1234';
+   const configurations = {
+     isActivityRequired: true, // Set to true if activity tracking is needed
+   };
+   
+   const profilesDataList = [
+     {
+       id: 'profile-id-1',
+       ijp_activity: { history: [] },
+       requestid: 'request-id-1',
+     },
+     {
+       id: 'profile-id-2',
+       ijp_activity: { history: [] },
+       requestid: 'request-id-2',
+     },
+   ];
+   
+   const action = IJP_ACTION_ENUM.POST_TO_IJP;
+   const newStatus = IJP_ACTION_ENUM.POST_TO_IJP_AUTOMATIC;
+   const category = ACTIVITY_TRACKER_CATEGORY.POST_TO_IJP_AUTOMATIC;
+   
+   addAutoPostToIjpHistory(clientid)(configurations, profilesDataList)(action, newStatus, category)
+     .then(() => {
+       console.log('Auto-post history updated successfully.');
+     })
+     .catch((error) => {
+       console.error('Error while updating auto-post history:', error);
+     });
+   ```
+* Response
+addAutoPostToIjpHistory also doesn’t return a direct response, but it updates each profile’s activity history with the specified action. You’ll typically observe updates in the database and see logs or console messages if the activity is tracked.
 
-     
+Example Activity History in Database
+Each profile's ijp_activity field is updated with a history entry. Here’s what a database entry might look like after the update:
 
+```json
+{
+  "ijp_activity": {
+    "history": [
+      {
+        "action": "POST_TO_IJP",
+        "date": "2024-11-07T10:23:45.678Z"
+      },
+      {
+        "action": "ENABLE_IJP",
+        "date": "2024-11-07T11:15:00.123Z"
+      }
+    ]
+  }
+}
+```
+
+In this example:
+
+* ijp_activity.history: An array that lists actions taken on this profile, each with a timestamp.
+If isActivityRequired is enabled in configurations, additional logs or messages might confirm the activity.
 
 
