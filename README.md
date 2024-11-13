@@ -315,8 +315,11 @@ This helper function converts each item in an array to SQL-compatible single-quo
 ### Triggering *markJobsForIJPByClient*
 
 * Purpose
+  
    *markJobsForIJPByClient* processes job profiles for a single client based on their configurations and generates SQL queries to update and retrieve profiles eligible for IJP.
+  
 * How to Trigger
+
    You need to pass in a client object, which includes clientid and configuration data. This function is generally called internally for each client but can be triggered directly if needed.
    ```javascript
       const client = {
@@ -344,6 +347,7 @@ This helper function converts each item in an array to SQL-compatible single-quo
   ```
    
 * Response
+
 When you call markJobsForIJPByClient, it will return an object with two properties: updateQuery and getQuery.
 
 Example Response
@@ -360,9 +364,11 @@ You can then execute these queries on the database to perform the updates and re
 
 ### Triggering *markJobsforIJP*
 * Purpose
+
    markJobsforIJP is the batch-processing function that applies the IJP posting configuration for all clients with IJP enabled. This function fetches each client’s configuration and then processes them, calling markJobsForIJPByClient or an alternative engine (EngineV2) as configured.
   
 * How to Trigger
+
    To call markJobsforIJP, provide a loggerObject for tracking logging information. This function runs without needing direct input parameters for each client.
    ```javascript
       const loggerObject = {
@@ -374,6 +380,7 @@ You can then execute these queries on the database to perform the updates and re
 
 markJobsforIJP(loggerObject);
 * Response
+
 markJobsforIJP doesn’t return a direct response object because it processes all IJP-enabled clients sequentially, updating each client's profiles based on configuration.
 
 Example Logs
@@ -398,8 +405,11 @@ Each log entry indicates:
 
 ### Triggering *addAutoPostToIjpHistory*     
 * Purpose
+
    The addAutoPostToIjpHistory function adds an activity history entry for each job profile, marking actions like posting to IJP or enabling IJP, and logs this activity in the database.
+
 * How to Trigger
+
    Call addAutoPostToIjpHistory with clientid, configuration details, and a list of profiles for which you want to update the activity history.
    ```javascript
    const clientid = 'client-uuid-1234';
@@ -433,6 +443,7 @@ Each log entry indicates:
      });
    ```
 * Response
+
 addAutoPostToIjpHistory also doesn’t return a direct response, but it updates each profile’s activity history with the specified action. You’ll typically observe updates in the database and see logs or console messages if the activity is tracked.
 
 Example Activity History in Database
