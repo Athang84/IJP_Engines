@@ -13,14 +13,6 @@ This is the documentation of the IJP engines, there working and functionalities
 Search Engine filters and retrieves job postings based on various criteria (e.g., user eligibility, designation, and specific configurations set by the company).
 Break down of search engine.
 
-### Modules imported
-
-1. db: Interface with the database.
-
-2. Logger: Provides logging capabilities to log errors or important information.
-
-3. getIjpClientConfiguration: A helper function to retrieve the IJP configuration for a specific client, which is used to determine which filters should be applied for that client.
-
 ### Helper Functions
 
 1. *userRotationEligibleCheck*
@@ -139,12 +131,6 @@ baseQueryFilters += ` and profile_status in ('${profileStatusList.join("', '")}'
 ## Apply Engine
 Apply Engine is responsible for various eligibility criteria are checked before a user can apply for a position. Let's break down the key parts of this code.
 
-### Modules Imported
-* *sequelize* for database operations.
-* *db* and *Logger* modules for database connections and logging.
-* *RMSConfiguration*, *getMatchScore*, and other utility functions for applying specific configurations and criteria checks.
-* *DateUtils* for date manipulation and *getIjpClientConfiguration* for fetching specific client configurations.
-
 ### Helper Functions
 * errorResponseHandler and successResponseHandler:
    * errorResponseHandler: Returns an error response object with status: false and an error message.
@@ -227,18 +213,12 @@ Key Filters and Their Checks:
 
 ## Post Engine
 
-### Modules imported
-
-* *db*: Accesses database models.
-* *Logger*: Used for logging actions, errors, and info.
-* *RMSConfiguration*: Provides configurations specific to RMS (likely Recruitment Management System).
-* *Constants*: Various enums and constants to help categorize actions and statuses.
-
 ### *mapDesignationName* Function
 
 ```javascript
 const mapDesignationName = async (clientid, designationCodes) => { ... };
 ```
+
 This function takes in a clientid and designationCodes to return a unique list of designation IDs matching the given codes.
 
 * Fetch Designations: Retrieves configuration data for the client from RMS.
